@@ -1,0 +1,25 @@
+name: Publish temporary Company relay release
+on:
+  push:
+    branches:
+      - relay-company-glbs-20260921
+    paths:
+      - ".github/workflows/release_company_glbs_temp.yml"
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: relay-company-glbs-20260921
+      - name: Verify relay ZIP and publish temporary release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s relay/company_glbs_pinned.zip
+          sha256sum relay/company_glbs_pinned.zip
+          gh release create emberhold-company-relay-20260921             relay/company_glbs_pinned.zip             relay/company_glbs_pinned.zip.sha256             --repo "$GITHUB_REPOSITORY"             --title "Temporary Emberhold Company CC0 Relay"             --notes "Temporary relay containing only the public-domain CC0 Company character asset ZIP required for Emberhold runtime validation."             --target relay-company-glbs-20260921
