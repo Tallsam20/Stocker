@@ -1,44 +1,33 @@
 name: Temporary Company GLB relay
 on:
   push:
-    branches:
-      - relay-company-glbs-20260921
+    branches: [relay-company-glbs-20260921]
+    paths: [".github/workflows/relay_company_glbs_temp.yml"]
 permissions:
-  contents: write
+  contents: read
 jobs:
   relay:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: relay-company-glbs-20260921
-      - name: Fetch original public Company pack
-        shell: bash
+          persist-credentials: false
+          sparse-checkout: relay
+      - name: Verify existing public CC0 model bytes
         run: |
           set -euo pipefail
-          curl -fL --retry 3 --retry-delay 2             "https://asset-store-prod.fra1.digitaloceanspaces.com/assets/718/thecompanycharactersStyloo.zip"             -o /tmp/company.zip
-          unzip -q /tmp/company.zip -d /tmp/company_pack
-          printf 'Pack contents matching target names:\n'
-          find /tmp/company_pack -type f \( -iname 'elf.glb' -o -iname 'knight.glb' -o -iname 'mage.glb' -o -iname 'nain.glb' \) -print
-          for n in elf knight mage nain; do
-            p="$(find /tmp/company_pack -type f -iname "$n.glb" | head -1)"
-            test -n "$p"
-            cp "$p" "/tmp/$n.glb"
-          done
-          echo "c9ed171bbb10c622214a1f67c08d425b255494ee5d6e616d1bd36f11ee0f15c4  /tmp/elf.glb" | sha256sum -c -
-          echo "435622a3c14683d4d5c5093d2c805d2ad993e26cd42b3faabbd63e46e58257f7  /tmp/knight.glb" | sha256sum -c -
-          echo "83f16c40acc1d9370bcebe3ce7c50191707a9843b93a31b453f8546ea1cb3c9d  /tmp/mage.glb" | sha256sum -c -
-          echo "d331926b56ca2eac03f6e41457e2ea867d3501b206dea08454a5944b0a1b11bd  /tmp/nain.glb" | sha256sum -c -
-      - name: Commit exact relay ZIP
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p relay
-          rm -f relay/company_glbs_pinned.zip relay/company_glbs_pinned.zip.sha256
-          zip -0 -j relay/company_glbs_pinned.zip /tmp/elf.glb /tmp/knight.glb /tmp/mage.glb /tmp/nain.glb
-          sha256sum relay/company_glbs_pinned.zip > relay/company_glbs_pinned.zip.sha256
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add relay/company_glbs_pinned.zip relay/company_glbs_pinned.zip.sha256
-          git commit -m "Temporary CC0 Company GLB relay [skip ci]"
-          git push origin HEAD:relay-company-glbs-20260921
+          mkdir -p /tmp/company
+          unzip -q relay/company_glbs_pinned.zip -d /tmp/company
+          cd /tmp/company
+          echo 'c9ed171bbb10c622214a1f67c08d425b255494ee5d6e616d1bd36f11ee0f15c4  elf.glb' | sha256sum -c -
+          echo '435622a3c14683d4d5c5093d2c805d2ad993e26cd42b3faabbd63e46e58257f7  knight.glb' | sha256sum -c -
+          echo '83f16c40acc1d9370bcebe3ce7c50191707a9843b93a31b453f8546ea1cb3c9d  mage.glb' | sha256sum -c -
+          echo 'd331926b56ca2eac03f6e41457e2ea867d3501b206dea08454a5944b0a1b11bd  nain.glb' | sha256sum -c -
+      - uses: actions/upload-artifact@v4
+        with:
+          name: company-exact-cc0-glbs
+          path: /tmp/company/*.glb
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 6
